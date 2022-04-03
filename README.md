@@ -8,7 +8,11 @@ https://www.youtube.com/watch?v=Cy9fAvsXGZA
 
 
 Tech Stack :- 
+
 -> Redis 
+
 -> Redis Streams
+
 -> Fast API
+
 -> React (optional)
