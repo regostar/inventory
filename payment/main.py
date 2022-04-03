@@ -1,10 +1,13 @@
 # 2nd micro service for payment, separate server
 # can be mongo db or mysql db
+import requests
+import time
 from fastapi import FastAPI
-from redis_om import get_redis_connection, HashModel
+from fastapi.background import BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
+from redis_om import HashModel, get_redis_connection
 from starlette.requests import Request
-import requests 
+
 
 app = FastAPI()
 
@@ -33,8 +36,14 @@ class Order(HashModel):
     class Meta:
         database = redis
     
+
+@app.get("/orders/{pk}")
+def get(pk: str):
+    return Order.get(pk)
+
+
 @app.post("/orders")
-async def create(request: Request): # id, quantity
+async def create(request: Request, background_tasks: BackgroundTasks): # id, quantity
     body = await request.json()
     # one way of getting all data from request
     # there is a better way to handle async tasks
@@ -51,11 +60,18 @@ async def create(request: Request): # id, quantity
     )
     order.save()
 
-    order_completed(order)
+    background_tasks.add_task(order_completed, order)
 
     return order
 
 
 def order_completed(order: Order):
+    # to be executed in the background
+    time.sleep(5)
     order.status = "completed"
     order.save()
+
+    # redis streams - messaging 
+    redis.xadd("order_completed", order.dict(), "*")
+     
+
